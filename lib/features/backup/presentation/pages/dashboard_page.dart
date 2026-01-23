@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:savepoint95/core/theme/app_colors.dart';
 import 'package:savepoint95/core/widgets/w95_button.dart';
+import 'package:savepoint95/core/widgets/w95_message_box.dart';
 import 'package:savepoint95/core/widgets/w95_panel.dart';
+import 'package:savepoint95/core/widgets/w95_progress_bar.dart';
+import 'package:savepoint95/features/backup/data/backup_service.dart';
 import 'package:savepoint95/features/backup/data/job_repository.dart';
 import 'package:savepoint95/features/backup/domain/backup_job.dart';
 import 'package:savepoint95/features/backup/presentation/dialogs/job_editor_dialog.dart';
+import 'package:savepoint95/features/backup/presentation/pages/backup_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,7 +20,10 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   final JobRepository _repository = JobRepository();
   List<BackupJob> jobs = [];
+  final BackupService _service = BackupService();
   bool _isLoading = true;
+  String? _selectedJobId;
+  final double _progress = 0.0;
 
   @override
   void initState() {
@@ -82,12 +89,83 @@ class _DashboardPageState extends State<DashboardPage> {
                           const SizedBox(width: 4),
                           W95Button(
                             child: const Text("Run Selected"),
-                            onTap: () {},
+                            onTap: () async {
+                              // validation
+                              if (_selectedJobId == null) {
+                                W95MessageBox.show(
+                                  context,
+                                  title: "Error",
+                                  message: "Please select a job first.",
+                                  type: MessageBoxType.warning,
+                                );
+                                return;
+                              }
+
+                              // find job object
+                              final job = jobs.firstWhere(
+                                (j) => j.id == _selectedJobId,
+                              );
+
+                              // simple loadeend feedback (TODO: make real alter)
+                              setState(() => _isLoading = true);
+                              try {
+                                // loop through EVERY destination in th elist
+                                for (String destPath in job.destinationPaths) {
+                                  await _service.copyDirectory(
+                                    job.sourcePath,
+                                    destPath,
+                                  );
+                                  // udpatae status in UI
+                                  setState(() {
+                                    job.status =
+                                        "Success: ${DateTime.now().toString().split('.')[0]}";
+                                    job.lastRun = DateTime.now();
+                                    _isLoading = false;
+                                  });
+
+                                  // save updated satus to disk immediately
+                                  await _repository.saveJobs(jobs);
+
+                                  // show success message
+                                  W95MessageBox.show(
+                                    context,
+                                    title: "Backup Completed",
+                                    message:
+                                        "Successfully backed up '${job.name}' to ${job.destinationPaths.length} locations.",
+                                    type: MessageBoxType.info,
+                                  );
+                                }
+                              } catch (e) {
+                                setState(() {
+                                  job.status = "Failed";
+                                  _isLoading = false;
+                                });
+
+                                if (mounted) {
+                                  W95MessageBox.show(
+                                    context,
+                                    title: "Backup Failed",
+                                    message: e.toString(),
+                                    type: MessageBoxType.error,
+                                  );
+                                }
+                              }
+                            },
                           ),
                           const SizedBox(width: 4),
                           W95Button(
                             child: const Text("Settings"),
                             onTap: () {},
+                          ),
+                          const SizedBox(width: 4),
+                          W95Button(
+                            child: const Text("Backup"),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const BackupPage(),
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -121,28 +199,53 @@ class _DashboardPageState extends State<DashboardPage> {
                           itemCount: jobs.length,
                           itemBuilder: (context, index) {
                             final job = jobs[index];
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.save,
-                                color: Colors.black,
-                              ),
-                              title: Text(
-                                job.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                            final isSelected = _selectedJobId == job.id;
+
+                            return Container(
+                              color: isSelected
+                                  ? AppColors.winBlue
+                                  : Colors.transparent,
+                              child: ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  Icons.save,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black,
                                 ),
+                                title: Text(
+                                  job.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  job.status,
+                                  style: TextStyle(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedJobId = job.id;
+                                  });
+                                },
                               ),
-                              subtitle: Text(job.status),
-                              dense: true,
-                              // slection logic later
-                              onTap: () {
-                                print("Selected ${job.name}");
-                              },
                             );
                           },
                         ),
                       ),
                     ),
+
+                    if (_isLoading) ...[
+                      const SizedBox(height: 8),
+                      W95ProgressBar(value: _progress),
+                    ],
                   ],
                 ),
               ),

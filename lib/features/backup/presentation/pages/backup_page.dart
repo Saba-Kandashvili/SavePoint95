@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:savepoint95/core/theme/app_colors.dart';
 import 'package:savepoint95/core/widgets/w95_button.dart';
 import 'package:savepoint95/core/widgets/w95_checkbox.dart';
+import 'package:savepoint95/core/widgets/w95_message_box.dart';
 import 'package:savepoint95/core/widgets/w95_panel.dart';
+import 'package:savepoint95/core/widgets/w95_progress_bar.dart';
 import 'package:savepoint95/core/widgets/w95_text_input.dart';
 import 'package:savepoint95/features/backup/data/backup_service.dart';
 
@@ -143,6 +145,53 @@ class _BackupPageState extends State<BackupPage> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+
+                const Text("Current Progress:"),
+                const SizedBox(height: 4),
+                const W95ProgressBar(value: 0.65), // 65% filled
+
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    W95Button(
+                      child: const Text("Test Error"),
+                      onTap: () {
+                        W95MessageBox.show(
+                          context,
+                          title: "Critical Error",
+                          message:
+                              "The flux capacitor is currently unmodified.",
+                          type: MessageBoxType.error,
+                        );
+                      },
+                    ),
+                    W95Button(
+                      child: const Text("Test Warning"),
+                      onTap: () {
+                        W95MessageBox.show(
+                          context,
+                          title: "Warning",
+                          message: "The flux capacitor is about to overheat.",
+                          type: MessageBoxType.warning,
+                        );
+                      },
+                    ),
+                    W95Button(
+                      child: const Text("Test Info"),
+                      onTap: () {
+                        W95MessageBox.show(
+                          context,
+                          title: "Information",
+                          message:
+                              "The flux capacitor is operating within normal parameters.",
+                          type: MessageBoxType.info,
+                        );
+                      },
                     ),
                   ],
                 ),
