@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:savepoint95/core/theme/app_colors.dart';
 import 'package:savepoint95/core/widgets/w95_button.dart';
 import 'package:savepoint95/core/widgets/w95_panel.dart';
+import 'package:savepoint95/features/backup/data/job_repository.dart';
 import 'package:savepoint95/features/backup/domain/backup_job.dart';
+import 'package:savepoint95/features/backup/presentation/dialogs/job_editor_dialog.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -12,23 +14,23 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  // mock data for now for ui testing
-  List<BackupJob> jobs = [
-    BackupJob(
-      id: '1',
-      name: 'Minecraft Server',
-      sourcePath: 'C:\\Games\\Minecraft',
-      destinationPaths: ['D:\\Backups'],
-      status: 'Idle',
-    ),
-    BackupJob(
-      id: '2',
-      name: 'Uni Projects',
-      sourcePath: 'C:\\Dev\\Uni',
-      destinationPaths: ['E:\\Backups'],
-      status: 'Last run: 2 hours ago',
-    ),
-  ];
+  final JobRepository _repository = JobRepository();
+  List<BackupJob> jobs = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData(); // load on startup
+  }
+
+  Future<void> _loadData() async {
+    final loadedJobs = await _repository.loadJobs();
+    setState(() {
+      jobs = loadedJobs;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +62,23 @@ class _DashboardPageState extends State<DashboardPage> {
                       padding: const EdgeInsets.all(4.0),
                       child: Row(
                         children: [
-                          W95Button(child: const Text("New Job"), onTap: () {}),
+                          W95Button(
+                            child: const Text("New Job"),
+                            onTap: () async {
+                              // open and await for results
+                              final newJob = await showDialog<BackupJob>(
+                                context: context,
+                                builder: (context) => const JobEditorDialog(),
+                              );
+                              // if result came back (User didn't click Cancel)
+                              if (newJob != null) {
+                                setState(() {
+                                  jobs.add(newJob); // update ui
+                                });
+                                _repository.saveJobs(jobs); // save to disk
+                              }
+                            },
+                          ),
                           const SizedBox(width: 4),
                           W95Button(
                             child: const Text("Run Selected"),
