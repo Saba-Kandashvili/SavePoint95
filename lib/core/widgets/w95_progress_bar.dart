@@ -4,12 +4,12 @@ import 'package:savepoint95/core/theme/app_colors.dart';
 class W95ProgressBar extends StatelessWidget {
   final double value; // 0.0 to 1.0
   final double height;
-
-  const W95ProgressBar({super.key, required this.value, this.height = 20.0});
+final bool showPercentage;
+  const W95ProgressBar({super.key, required this.value, this.height = 20.0, this.showPercentage = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget barWidget  = Container(
       height: height,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -51,6 +51,30 @@ class W95ProgressBar extends StatelessWidget {
           );
         },
       ),
+    );
+
+    if (!showPercentage) return barWidget;
+
+    // if also show percentage
+    return Row(
+      children: [
+        // precentage text in sized box to perserve space
+        SizedBox(
+width: 35,
+child: Text(
+  "${(value * 100).toInt()}%",
+  textAlign: TextAlign.end,
+  style: const TextStyle(
+    fontFamily: 'MS Sans Serif',
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+  ),
+),
+        ),
+
+        const SizedBox(width: 6), // spacing between text and bar
+        Expanded(child: barWidget),
+      ],
     );
   }
 }

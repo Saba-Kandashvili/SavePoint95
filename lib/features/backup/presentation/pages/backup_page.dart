@@ -62,7 +62,7 @@ class _BackupPageState extends State<BackupPage> {
 
     // show a loding indicator maybe a bool
     try {
-      await _backupService.copyDirectory(source, destination);
+      // await _backupService.runJob(Job); //TODO: REMOVE THIS FILE PROBABLY
       // show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Backup completed successfully.")),

@@ -23,7 +23,8 @@ class _DashboardPageState extends State<DashboardPage> {
   final BackupService _service = BackupService();
   bool _isLoading = true;
   String? _selectedJobId;
-  final double _progress = 0.0;
+  double _currentProgress = 0.0;
+  String? _currentStatusText;
 
   @override
   void initState() {
@@ -69,8 +70,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       padding: const EdgeInsets.all(4.0),
                       child: Row(
                         children: [
-                          W95Button(
-                            child: const Text("New Job"),
+                          W95Button.text(
+                            label: "New Job",
                             onTap: () async {
                               // open and await for results
                               final newJob = await showDialog<BackupJob>(
@@ -87,8 +88,8 @@ class _DashboardPageState extends State<DashboardPage> {
                             },
                           ),
                           const SizedBox(width: 4),
-                          W95Button(
-                            child: const Text("Run Selected"),
+                          W95Button.text(
+                            label: "Run Selected",
                             onTap: () async {
                               // validation
                               if (_selectedJobId == null) {
@@ -110,31 +111,31 @@ class _DashboardPageState extends State<DashboardPage> {
                               setState(() => _isLoading = true);
                               try {
                                 // loop through EVERY destination in th elist
-                                for (String destPath in job.destinationPaths) {
-                                  await _service.copyDirectory(
-                                    job.sourcePath,
-                                    destPath,
-                                  );
-                                  // udpatae status in UI
-                                  setState(() {
-                                    job.status =
-                                        "Success: ${DateTime.now().toString().split('.')[0]}";
-                                    job.lastRun = DateTime.now();
-                                    _isLoading = false;
-                                  });
+                                _service.runJob(job).listen(
+                                  (status) {
+                                    setState(() {
+                                      _currentProgress = status.progress;
+                                      _currentStatusText = status.currentFile;
 
-                                  // save updated satus to disk immediately
-                                  await _repository.saveJobs(jobs);
-
-                                  // show success message
-                                  W95MessageBox.show(
-                                    context,
-                                    title: "Backup Completed",
-                                    message:
-                                        "Successfully backed up '${job.name}' to ${job.destinationPaths.length} locations.",
-                                    type: MessageBoxType.info,
-                                  );
-                                }
+                                      if (status.error != null) {
+                                        // show error box
+                                        W95MessageBox.show(
+                                          context,
+                                          title: "Backup Error",
+                                          message: status.error!,
+                                          type: MessageBoxType.error,
+                                        );
+                                      }
+                                    });
+                                  },
+                                  onDone: () {
+                                    setState((){
+                                      _isLoading = false;
+                                      job.lastRun = DateTime.now();
+                                      job.status = "Success";
+                                    });
+                                  },
+                                );
                               } catch (e) {
                                 setState(() {
                                   job.status = "Failed";
@@ -153,13 +154,13 @@ class _DashboardPageState extends State<DashboardPage> {
                             },
                           ),
                           const SizedBox(width: 4),
-                          W95Button(
-                            child: const Text("Settings"),
+                          W95Button.text(
+                            label: "Settings",
                             onTap: () {},
                           ),
                           const SizedBox(width: 4),
-                          W95Button(
-                            child: const Text("Backup"),
+                          W95Button.text(
+                            label: "Backup",
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -244,7 +245,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
                     if (_isLoading) ...[
                       const SizedBox(height: 8),
-                      W95ProgressBar(value: _progress),
+                      W95ProgressBar(value: _currentProgress, showPercentage: true),
                     ],
                   ],
                 ),
@@ -259,7 +260,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildMenuItem(String label) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Text(label), // need to make them clickable later
+      child: Text(label, style: const TextStyle(fontFamily: 'MS W98 UI')), // need to make them clickable later
     );
   }
 }

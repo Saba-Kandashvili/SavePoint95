@@ -5,7 +5,20 @@ class W95Button extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap; // standard dart type for a fucntion () {}
 
-  const W95Button({super.key, required this.child, required this.onTap});
+static const TextStyle _defaultTextStyle = TextStyle(
+    fontFamily: 'MS W98 UI',
+  );
+
+  // W95 styled button with a text label in MS Sans Serif by default
+  W95Button.text({
+    super.key,
+    required String label,
+    required this.onTap,
+    TextStyle? style,
+  }) : child = Text(label, style: _defaultTextStyle.merge(style));
+
+   const W95Button({super.key, required this.child, required this.onTap});
+
 
   @override
   State<W95Button> createState() => _W95ButtonState();
