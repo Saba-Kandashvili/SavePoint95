@@ -151,7 +151,7 @@ class _JobEditorDialogState extends State<JobEditorDialog> {
               Row(
                 children: [
                   W95Checkbox(
-                    label: "Zip Compression",
+                    child: Text("Zip Compression"),
                     value: _zipFiles,
                     onChanged: (v) => setState(() => _zipFiles = v!),
                   ),
@@ -159,7 +159,7 @@ class _JobEditorDialogState extends State<JobEditorDialog> {
                   const SizedBox(width: 16),
 
                   W95Checkbox(
-                    label: "Atomic Mode (Safe)",
+                    child: Text("Atomic Mode (Safe)"),
                     value: _atomicMode,
                     onChanged: (v) => setState(() => _atomicMode = v!),
                   ),

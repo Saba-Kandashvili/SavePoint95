@@ -4,14 +4,26 @@ import 'package:savepoint95/core/theme/app_colors.dart';
 class W95Checkbox extends StatelessWidget {
   final bool value;
   final ValueChanged<bool?> onChanged;
-  final String label;
+  final Widget child;
+
+  static const TextStyle _defaultTextStyle = TextStyle(
+    fontFamily: 'MS W98 UI',
+  );
 
   const W95Checkbox({
     super.key,
     required this.value,
     required this.onChanged,
-    required this.label,
+    required this.child,
   });
+
+  W95Checkbox.text({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required String label,
+    TextStyle? style,
+  }) : child = Text(label, style: _defaultTextStyle.merge(style));
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +44,7 @@ class W95Checkbox extends StatelessWidget {
             child: Icon(value ? Icons.check : null, size: 16.0),
           ),
           SizedBox(width: 8.0),
-          Text(label),
+          child,
         ],
       ),
     );

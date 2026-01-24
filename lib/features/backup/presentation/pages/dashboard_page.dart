@@ -160,14 +160,20 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                           const SizedBox(width: 4),
                           W95Button.text(
-                            label: "Backup",
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const BackupPage(),
-                              ),
+                            label: "Delete",
+                            onTap: () async {
+                              // find job
+                            if (_selectedJobId == null) return;
+
+// rmeove job
+                            final job = jobs.firstWhere((j) => j.id == _selectedJobId);
+                            setState(() {
+                              jobs.remove(job);
+                              _selectedJobId = null;
+
+                            });
+                            }
                             ),
-                          ),
                         ],
                       ),
                     ),

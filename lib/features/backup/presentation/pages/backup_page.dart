@@ -122,7 +122,7 @@ class _BackupPageState extends State<BackupPage> {
                 const SizedBox(height: 16),
 
                 W95Checkbox(
-                  label: "Copy hidden files",
+                  child: Text("Copy hidden files"),
                   value: _shouldCopyHiddenFiles,
                   onChanged: (val) {
                     setState(() {

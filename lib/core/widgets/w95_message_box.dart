@@ -105,7 +105,7 @@ class W95MessageBox extends StatelessWidget {
                   children: [
                     _buildIcon(),
                     const SizedBox(width: 16),
-                    Expanded(child: Text(message)),
+                    Expanded(child: Text(message, style: const TextStyle(fontFamily: 'MS W98 UI'))),
                   ],
                 ),
               ),
