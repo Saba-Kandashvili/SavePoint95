@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:savepoint95/core/theme/app_colors.dart';
 import 'package:savepoint95/core/widgets/w95_button.dart';
 import 'package:savepoint95/core/widgets/w95_panel.dart';
@@ -24,6 +25,7 @@ class W95MessageBox extends StatelessWidget {
     required String title,
     required String message,
     MessageBoxType type = MessageBoxType.info,
+    VoidCallback? onOk,
   }) {
     return showDialog(
       context: context,
@@ -31,7 +33,9 @@ class W95MessageBox extends StatelessWidget {
         title: title,
         message: message,
         type: type,
-        onOk: () => Navigator.pop(context),
+        onOk: () {
+          onOk?.call();
+        },
       ),
     );
   }
@@ -102,23 +106,50 @@ class W95MessageBox extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start, // allign icon on top of text
                   children: [
                     _buildIcon(),
                     const SizedBox(width: 16),
-                    Expanded(child: Text(message, style: const TextStyle(fontFamily: 'MS W98 UI'))),
+                    // shoud lbe highlitable
+                    Expanded(
+                      child: SelectableText(
+                        message,
+                        style: const TextStyle(fontFamily: 'MS W98 UI'),
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              // OK button
-              W95Button(
-                onTap: onOk,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24),
-                  child: Text("OK"),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // OK button
+                  W95Button(
+                    onTap: onOk,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Text("OK"),
+                    ),
+                  ),
+
+                  // copy button only fo rerrore
+                  if (type == MessageBoxType.error) ...[
+                    const SizedBox(width: 8),
+                    W95Button(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: message));
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("Copy"),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                ],
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),

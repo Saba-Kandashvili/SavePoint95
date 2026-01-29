@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:math';
+
 import 'package:archive/archive_io.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:savepoint95/features/backup/domain/backup_job.dart';
@@ -39,106 +39,103 @@ class BackupService {
     // execution loop
     for (String destPath in job.destinationPaths) {
       try {
-      final String folderName = job.sourcePath
-          .split(Platform.pathSeparator)
-          .last;
+        final String folderName = job.sourcePath
+            .split(Platform.pathSeparator)
+            .last;
 
-      if (job.zipFiles) {
-        final String tempZip =
-            "$destPath${Platform.pathSeparator}$folderName.zip.tmp";
-        final String finalZip =
-            "$destPath${Platform.pathSeparator}$folderName.zip";
+        if (job.zipFiles) {
+          final String tempZip =
+              "$destPath${Platform.pathSeparator}$folderName.zip.tmp";
+          final String finalZip =
+              "$destPath${Platform.pathSeparator}$folderName.zip";
 
-            // cleanup previous runs
-            if (await File(tempZip).exists()) {
-              await File(tempZip).delete();
-            }
-            if (await File(finalZip).exists()) {
-              await File(finalZip).delete();
-            }
+          // cleanup previous runs
+          if (await File(tempZip).exists()) {
+            await File(tempZip).delete();
+          }
+          if (await File(finalZip).exists()) {
+            await File(finalZip).delete();
+          }
 
-            // initialise encoder
-            var encoder = ZipFileEncoder();
+          // initialise encoder
+          var encoder = ZipFileEncoder();
           encoder.create(tempZip);
 
-            for (var entity in files) {
-              if (entity is File)
-              {
-                // get path realtive to sorce
-                // need the zip to contain the fikder structures not aboslute paths
-                final String relativePath = entity.path.substring(
-                  sourceDir.path.length + 1,
-                );
+          for (var entity in files) {
+            if (entity is File) {
+              // get path realtive to sorce
+              // need the zip to contain the fikder structures not aboslute paths
+              final String relativePath = entity.path.substring(
+                sourceDir.path.length + 1,
+              );
 
-                yield BackupStatus(
-                  progress:
-                      processedFiles / (totalFiles * job.destinationPaths.length),
-                  currentFile: "Zipping: $relativePath...",
-                );
+              yield BackupStatus(
+                progress:
+                    processedFiles / (totalFiles * job.destinationPaths.length),
+                currentFile: "Zipping: $relativePath...",
+              );
 
-                // add to zip
+              // add to zip
               // await here but note that addFile is technically synchronous CPU work
               await encoder.addFile(entity, relativePath);
               processedFiles++;
-              }
             }
-  
-            encoder.close();
-
-// rename .tmp to final
-            await File(tempZip).rename(finalZip);
-      }
-
-      // branch b standard copy
-      else {
-
-      // atomic logic per destination
-      final String tempDest =
-          "$destPath${Platform.pathSeparator}$folderName.tmp";
-      final String finalDest = "$destPath${Platform.pathSeparator}$folderName";
-
-      // if tmp exist froma aprevious crush delete it
-      if (await Directory(tempDest).exists()) {
-        await Directory(tempDest).delete(recursive: true);
-      }
-
-      // create the .tmp root
-      await Directory(tempDest).create(recursive: true);
-
-        // file copy loop
-        for (var entity in files) {
-          if (entity is File) {
-            // calculate relative apth
-            final String relativePath = entity.path.substring(
-              sourceDir.path.length + 1,
-            );
-            final String targetPath =
-                "$tempDest${Platform.pathSeparator}$relativePath";
-
-            // emit progress
-            yield BackupStatus(
-              progress:
-                  processedFiles / (totalFiles * job.destinationPaths.length),
-              currentFile: "Copying: $relativePath to $destPath...",
-            );
-
-            // create parent directory if needed
-            final parentDir = Directory(File(targetPath).parent.path);
-            if (!await parentDir.exists()) {
-              await parentDir.create(recursive: true);
-            }
-
-            // actual copy
-            await entity.copy(targetPath);
-            processedFiles++;
           }
-        }
 
-        // rename .tmp to actual name
-        await Directory(tempDest).rename(finalDest);
-      }
-      }
-       catch (e) {
+          encoder.close();
+
+          // rename .tmp to final
+          await File(tempZip).rename(finalZip);
+        }
+        // branch b standard copy
+        else {
+          // atomic logic per destination
+          final String tempDest =
+              "$destPath${Platform.pathSeparator}$folderName.tmp";
+          final String finalDest =
+              "$destPath${Platform.pathSeparator}$folderName";
+
+          // if tmp exist froma aprevious crush delete it
+          if (await Directory(tempDest).exists()) {
+            await Directory(tempDest).delete(recursive: true);
+          }
+
+          // create the .tmp root
+          await Directory(tempDest).create(recursive: true);
+
+          // file copy loop
+          for (var entity in files) {
+            if (entity is File) {
+              // calculate relative apth
+              final String relativePath = entity.path.substring(
+                sourceDir.path.length + 1,
+              );
+              final String targetPath =
+                  "$tempDest${Platform.pathSeparator}$relativePath";
+
+              // emit progress
+              yield BackupStatus(
+                progress:
+                    processedFiles / (totalFiles * job.destinationPaths.length),
+                currentFile: "Copying: $relativePath to $destPath...",
+              );
+
+              // create parent directory if needed
+              final parentDir = Directory(File(targetPath).parent.path);
+              if (!await parentDir.exists()) {
+                await parentDir.create(recursive: true);
+              }
+
+              // actual copy
+              await entity.copy(targetPath);
+              processedFiles++;
+            }
+          }
+
+          // rename .tmp to actual name
+          await Directory(tempDest).rename(finalDest);
+        }
+      } catch (e) {
         // if anythgin fails  yield erro and maybe cleanup .tmp
         yield BackupStatus(progress: 0, currentFile: "", error: e.toString());
 
@@ -147,10 +144,6 @@ class BackupService {
       }
     }
 
-    yield BackupStatus(
-      progress: 1.0,
-      currentFile: "Backup Complete!",
-      isDone: true,
-    );
+    yield BackupStatus(progress: 1.0, currentFile: "Backup Complete!");
   }
 }

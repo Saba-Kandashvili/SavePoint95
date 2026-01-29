@@ -8,7 +8,6 @@ import 'package:savepoint95/features/backup/data/backup_service.dart';
 import 'package:savepoint95/features/backup/data/job_repository.dart';
 import 'package:savepoint95/features/backup/domain/backup_job.dart';
 import 'package:savepoint95/features/backup/presentation/dialogs/job_editor_dialog.dart';
-import 'package:savepoint95/features/backup/presentation/pages/backup_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -38,6 +37,57 @@ class _DashboardPageState extends State<DashboardPage> {
       jobs = loadedJobs;
       _isLoading = false;
     });
+  }
+
+  Future<void> _deleteSelectedJob() async {
+    if (_selectedJobId == null) return;
+
+    // find the job
+    final job = jobs.firstWhere((j) => j.id == _selectedJobId);
+
+    // confirmation dialog
+    await W95MessageBox.show(
+      context,
+      title: "Delete Job",
+      message: "Are you sure you want to delete the job '${job.name}'?",
+      type: MessageBoxType.warning,
+      onOk: () {
+        // deletion logic
+        setState(() {
+          jobs.removeWhere((j) => j.id == _selectedJobId);
+          _selectedJobId = null;
+        });
+
+        _repository.saveJobs(jobs); // save changes to disk
+        Navigator.pop(context); // close messagebox
+      },
+    );
+  }
+
+  Future<void> _editSelectedJob() async {
+    if (_selectedJobId == null) return;
+
+    final existingJob = jobs.firstWhere((j) => j.id == _selectedJobId);
+
+    // open dialg with data
+    final updatedJob = await showDialog<BackupJob>(
+      context: context,
+      builder: (context) => JobEditorDialog(job: existingJob), // pass data
+    );
+
+    // if user clicked ok
+    if (updatedJob != null) {
+      setState(() {
+        // find index of old job and replace it
+        final index = jobs.indexWhere((j) => j.id == _selectedJobId);
+        if (index != -1) {
+          jobs[index] = updatedJob;
+        }
+      });
+
+      await _repository.saveJobs(jobs); // save to disk
+    }
+    //
   }
 
   @override
@@ -111,31 +161,34 @@ class _DashboardPageState extends State<DashboardPage> {
                               setState(() => _isLoading = true);
                               try {
                                 // loop through EVERY destination in th elist
-                                _service.runJob(job).listen(
-                                  (status) {
-                                    setState(() {
-                                      _currentProgress = status.progress;
-                                      _currentStatusText = status.currentFile;
+                                _service
+                                    .runJob(job)
+                                    .listen(
+                                      (status) {
+                                        setState(() {
+                                          _currentProgress = status.progress;
+                                          _currentStatusText =
+                                              status.currentFile;
 
-                                      if (status.error != null) {
-                                        // show error box
-                                        W95MessageBox.show(
-                                          context,
-                                          title: "Backup Error",
-                                          message: status.error!,
-                                          type: MessageBoxType.error,
-                                        );
-                                      }
-                                    });
-                                  },
-                                  onDone: () {
-                                    setState((){
-                                      _isLoading = false;
-                                      job.lastRun = DateTime.now();
-                                      job.status = "Success";
-                                    });
-                                  },
-                                );
+                                          if (status.error != null) {
+                                            // show error box
+                                            W95MessageBox.show(
+                                              context,
+                                              title: "Backup Error",
+                                              message: status.error!,
+                                              type: MessageBoxType.error,
+                                            );
+                                          }
+                                        });
+                                      },
+                                      onDone: () {
+                                        setState(() {
+                                          _isLoading = false;
+                                          job.lastRun = DateTime.now();
+                                          job.status = "Success";
+                                        });
+                                      },
+                                    );
                               } catch (e) {
                                 setState(() {
                                   job.status = "Failed";
@@ -156,102 +209,101 @@ class _DashboardPageState extends State<DashboardPage> {
                           const SizedBox(width: 4),
                           W95Button.text(
                             label: "Settings",
-                            onTap: () {},
+                            onTap: _editSelectedJob,
                           ),
                           const SizedBox(width: 4),
                           W95Button.text(
                             label: "Delete",
-                            onTap: () async {
-                              // find job
-                            if (_selectedJobId == null) return;
-
-// rmeove job
-                            final job = jobs.firstWhere((j) => j.id == _selectedJobId);
-                            setState(() {
-                              jobs.remove(job);
-                              _selectedJobId = null;
-
-                            });
-                            }
-                            ),
+                            onTap: _deleteSelectedJob,
+                          ),
                         ],
                       ),
                     ),
 
                     Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            // sunken Border Logic
-                            top: const BorderSide(
-                              color: AppColors.darkShadow,
-                              width: 2,
-                            ),
-                            left: const BorderSide(
-                              color: AppColors.darkShadow,
-                              width: 2,
-                            ),
-                            right: const BorderSide(
-                              color: AppColors.highlight,
-                              width: 2,
-                            ),
-                            bottom: const BorderSide(
-                              color: AppColors.highlight,
-                              width: 2,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedJobId = null;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border(
+                              // sunken Border Logic
+                              top: const BorderSide(
+                                color: AppColors.darkShadow,
+                                width: 2,
+                              ),
+                              left: const BorderSide(
+                                color: AppColors.darkShadow,
+                                width: 2,
+                              ),
+                              right: const BorderSide(
+                                color: AppColors.highlight,
+                                width: 2,
+                              ),
+                              bottom: const BorderSide(
+                                color: AppColors.highlight,
+                                width: 2,
+                              ),
                             ),
                           ),
-                        ),
-                        child: ListView.builder(
-                          itemCount: jobs.length,
-                          itemBuilder: (context, index) {
-                            final job = jobs[index];
-                            final isSelected = _selectedJobId == job.id;
+                          child: ListView.builder(
+                            itemCount: jobs.length,
+                            itemBuilder: (context, index) {
+                              final job = jobs[index];
+                              final isSelected = _selectedJobId == job.id;
 
-                            return Container(
-                              color: isSelected
-                                  ? AppColors.winBlue
-                                  : Colors.transparent,
-                              child: ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  Icons.save,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.black,
-                                ),
-                                title: Text(
-                                  job.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
+                              return Container(
+                                color: isSelected
+                                    ? AppColors.winBlue
+                                    : Colors.transparent,
+                                child: ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                    Icons.save,
                                     color: isSelected
                                         ? Colors.white
                                         : Colors.black,
                                   ),
-                                ),
-                                subtitle: Text(
-                                  job.status,
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.black,
+                                  title: Text(
+                                    job.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
                                   ),
+                                  subtitle: Text(
+                                    job.status,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedJobId = job.id;
+                                    });
+                                  },
                                 ),
-                                onTap: () {
-                                  setState(() {
-                                    _selectedJobId = job.id;
-                                  });
-                                },
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
 
                     if (_isLoading) ...[
                       const SizedBox(height: 8),
-                      W95ProgressBar(value: _currentProgress, showPercentage: true),
+                      W95ProgressBar(
+                        value: _currentProgress,
+                        showPercentage: true,
+                      ),
                     ],
                   ],
                 ),
@@ -266,7 +318,10 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildMenuItem(String label) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: Text(label, style: const TextStyle(fontFamily: 'MS W98 UI')), // need to make them clickable later
+      child: Text(
+        label,
+        style: const TextStyle(fontFamily: 'MS W98 UI'),
+      ), // need to make them clickable later
     );
   }
 }
